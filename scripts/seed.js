@@ -1,0 +1,1240 @@
+const mongoose = require('mongoose');
+const env = require('../src/config/env');
+const logger = require('../src/utils/logger');
+const User = require('../src/models/User');
+const CareerDNA = require('../src/models/CareerDNA');
+const Company = require('../src/models/Company');
+const CompanyIntelligence = require('../src/models/CompanyIntelligence');
+const Source = require('../src/models/Source');
+const Evidence = require('../src/models/Evidence');
+const ReviewAggregate = require('../src/models/ReviewAggregate');
+const SavedCompany = require('../src/models/SavedCompany');
+const ComparisonScenario = require('../src/models/ComparisonScenario');
+const ResearchHistory = require('../src/models/ResearchHistory');
+const Alert = require('../src/models/Alert');
+const AIConversation = require('../src/models/AIConversation');
+
+const seedDatabase = async () => {
+  try {
+    logger.info('Connecting to MongoDB for seeding...');
+    await mongoose.connect(env.MONGODB_URI);
+    logger.info('Connected to MongoDB.');
+
+    // Clear existing collections
+    logger.info('Clearing existing data...');
+    await Promise.all([
+      User.deleteMany({}),
+      CareerDNA.deleteMany({}),
+      Company.deleteMany({}),
+      CompanyIntelligence.deleteMany({}),
+      Source.deleteMany({}),
+      Evidence.deleteMany({}),
+      ReviewAggregate.deleteMany({}),
+      SavedCompany.deleteMany({}),
+      ComparisonScenario.deleteMany({}),
+      ResearchHistory.deleteMany({}),
+      Alert.deleteMany({}),
+      AIConversation.deleteMany({}),
+    ]);
+
+    // 1. Create Default User (Hariom)
+    logger.info('Creating demo user Hariom...');
+    const passwordHash = await User.hashPassword('Password123!');
+    const user = await User.create({
+      name: 'Hariom',
+      email: 'hariom@example.com',
+      passwordHash,
+      careerStage: 'Fresher',
+      targetRole: 'Backend Developer',
+      defaultLocation: 'Bangalore, India',
+      preferredWorkStyle: 'Hybrid',
+      researchPreferences: {
+        showSourceMetadata: true,
+        showConfidence: true,
+        useCareerDNAForRecommendations: true,
+      },
+      notificationPreferences: {
+        evidenceUpdates: true,
+        sourceConflictAlerts: true,
+        emailDigest: false,
+        digestFrequency: 'Weekly',
+      },
+    });
+
+    // 2. Create Career DNA for Hariom
+    logger.info('Creating Career DNA for Hariom...');
+    await CareerDNA.create({
+      userId: user._id,
+      name: 'Hariom',
+      targetRole: 'Backend Developer',
+      experience: 'Fresher',
+      workStyle: 'Hybrid',
+      preferredLocation: 'Bangalore, India',
+      priorities: {
+        learning: 95,
+        growth: 90,
+        stability: 85,
+        culture: 80,
+        wlb: 75,
+        salary: 70,
+        technology: 90,
+        location: 60,
+      },
+      skills: ['JavaScript', 'Node.js', 'Python', 'SQL'],
+      isComplete: true,
+    });
+
+    // 3. Define Companies Data
+    const rawCompanies = [
+      {
+        slug: 'tcs',
+        name: 'Tata Consultancy Services',
+        shortName: 'TCS',
+        logoText: 'tcs',
+        logoBg: '#1E293B',
+        logoColor: '#FFFFFF',
+        industry: 'IT Services · India',
+        location: 'Mumbai, India',
+        website: 'tcs.com',
+        description:
+          'An IT services and consulting employer with broad project and technology exposure. Use the sample research below to explore workplace experiences; role, team and location can change the picture.',
+        overallScore: 82,
+        overallScoreMax: 100,
+        confidence: {
+          level: 'high',
+          percentage: 82,
+          label: 'High confidence · 82%',
+          detail: 'Composite score based on available workplace evidence across 127 reviews & 3 sample sources.',
+        },
+        reviewCount: 127,
+        sampleSourcesCount: 3,
+        sampleSourcesSummary: 'Oct 2026 · Sample A / B / C',
+        isDemoData: true,
+        categories: {
+          culture: {
+            key: 'culture',
+            name: 'Work Culture',
+            score: 84,
+            trend: 'positive',
+            trendText: 'Category evidence score: 84',
+            summary: 'Collaboration is a recurring positive.',
+            evidenceCount: 64,
+            confidence: { level: 'high', percentage: 82, label: 'High confidence' },
+          },
+          salary: {
+            key: 'salary',
+            name: 'Salary & Benefits',
+            score: 70,
+            trend: 'mixed',
+            trendText: 'Category evidence score: 70',
+            summary: 'Salary progression receives mixed sentiment across junior bands.',
+            evidenceCount: 49,
+            confidence: { level: 'conflict', label: 'Mixed confidence' },
+          },
+          wlb: {
+            key: 'wlb',
+            name: 'Work-Life Balance',
+            score: 81,
+            trend: 'neutral',
+            trendText: 'Category evidence score: 81',
+            summary: 'Balance varies by project and workload.',
+            evidenceCount: 58,
+            confidence: { level: 'high', percentage: 80, label: 'High confidence' },
+          },
+          growth: {
+            key: 'growth',
+            name: 'Career Growth',
+            score: 88,
+            trend: 'positive',
+            trendText: 'Category evidence score: 88',
+            summary: 'Ample internal opportunities across diverse delivery accounts.',
+            evidenceCount: 72,
+            confidence: { level: 'high', percentage: 83, label: 'High confidence' },
+          },
+          management: {
+            key: 'management',
+            name: 'Management',
+            score: 76,
+            trend: 'mixed',
+            trendText: 'Category evidence score: 76',
+            summary: 'Team lead experiences are inconsistent across practices.',
+            evidenceCount: 42,
+            confidence: { level: 'mixed', label: 'Mixed confidence' },
+          },
+          learning: {
+            key: 'learning',
+            name: 'Learning Opportunities',
+            score: 91,
+            trend: 'positive',
+            trendText: 'Category evidence score: 91',
+            summary: 'Training and project learning stand out as a core organizational strength.',
+            evidenceCount: 86,
+            confidence: { level: 'high', percentage: 85, label: 'High confidence' },
+          },
+          stability: {
+            key: 'stability',
+            name: 'Job Stability',
+            score: 89,
+            trend: 'positive',
+            trendText: 'Category evidence score: 89',
+            summary: 'Stability is a recurring praised theme across all tenures.',
+            evidenceCount: 74,
+            confidence: { level: 'high', percentage: 88, label: 'High confidence' },
+          },
+          satisfaction: {
+            key: 'satisfaction',
+            name: 'Overall Satisfaction',
+            score: 82,
+            trend: 'positive',
+            trendText: 'Category evidence score: 82',
+            summary: 'General feedback is generally positive for entry-level engineering.',
+            evidenceCount: 68,
+            confidence: { level: 'high', percentage: 81, label: 'High confidence' },
+          },
+        },
+        positiveSignals: ['Strong learning & stability', 'Predictable organizational foundation'],
+        concernSignals: ['Salary progression is mixed', 'Project allocation varies'],
+        aiSummary: {
+          highlight: 'Strong learning and project exposure signals.',
+          quote:
+            'Available employee feedback frequently highlights strong learning opportunities and project exposure. Career growth is generally positive, while salary progression shows more mixed sentiment.',
+          freshness: 'Updated 12 days ago',
+          sourcesCount: 3,
+          reviewCount: 127,
+          confidence: { level: 'high', percentage: 82, label: 'High confidence · 82%' },
+        },
+        praises: [
+          { title: 'Learning opportunities', percentage: 76, count: 63 },
+          { title: 'Career growth', percentage: 71, count: 58 },
+          { title: 'Job stability', percentage: 87, count: 74 },
+        ],
+        mixed: [
+          { title: 'Salary progression', percentage: 43, count: 35 },
+          { title: 'Management consistency', percentage: 31, count: 25 },
+          { title: 'Peak workload / WLB', percentage: 28, count: 22 },
+        ],
+        risks: [
+          { level: 'Medium', category: 'Salary progression', score: 52, description: 'Mixed salary feedback may matter if compensation is your top priority.' },
+          { level: 'Medium', category: 'Peak workload', score: 48, description: 'Ask about release cycles and expectations for the specific project.' },
+          { level: 'Low', category: 'Stability', score: 18, description: 'Organizational scale creates exceptional bench and tenure safety.' },
+        ],
+        concernsToInvestigate: [
+          { id: '01', title: 'Salary progression', description: 'Mixed salary feedback may matter more if compensation is your top priority.' },
+          { id: '02', title: 'Peak workload', description: 'Ask about moving cycles and expectations for the specific project.' },
+          { id: '03', title: 'Management consistency', description: 'Team-specific experiences can differ from this company-wide pattern.' },
+        ],
+      },
+      {
+        slug: 'infosys',
+        name: 'Infosys Limited',
+        shortName: 'Infosys',
+        logoText: 'in',
+        logoBg: '#0A66C2',
+        logoColor: '#FFFFFF',
+        industry: 'IT Services · India',
+        location: 'Bangalore, India',
+        website: 'infosys.com',
+        description:
+          'A global leader in next-generation digital services and consulting, recognized for comprehensive foundational training and balanced workplace routines.',
+        overallScore: 80,
+        overallScoreMax: 100,
+        confidence: {
+          level: 'high',
+          percentage: 81,
+          label: 'High confidence · 81%',
+          detail: 'Aggregated review sample of 114 entries with verified source agreement.',
+        },
+        reviewCount: 114,
+        sampleSourcesCount: 3,
+        sampleSourcesSummary: 'Oct 2026 · Sample A / B / C',
+        isDemoData: true,
+        categories: {
+          culture: {
+            key: 'culture',
+            name: 'Work Culture',
+            score: 81,
+            trend: 'positive',
+            trendText: 'Category evidence score: 81',
+            summary: 'Structured campus atmosphere with collaborative peers.',
+            evidenceCount: 52,
+            confidence: { level: 'high', percentage: 80, label: 'High confidence' },
+          },
+          salary: {
+            key: 'salary',
+            name: 'Salary & Benefits',
+            score: 72,
+            trend: 'mixed',
+            trendText: 'Category evidence score: 72',
+            summary: 'Standard industry compensation bands for freshers.',
+            evidenceCount: 44,
+            confidence: { level: 'mixed', label: 'Mixed confidence' },
+          },
+          wlb: {
+            key: 'wlb',
+            name: 'Work-Life Balance',
+            score: 88,
+            trend: 'positive',
+            trendText: 'Category evidence score: 88',
+            summary: 'Highest rated for predictable hours and hybrid flexibility.',
+            evidenceCount: 65,
+            confidence: { level: 'high', percentage: 86, label: 'High confidence' },
+          },
+          growth: {
+            key: 'growth',
+            name: 'Career Growth',
+            score: 82,
+            trend: 'positive',
+            trendText: 'Category evidence score: 82',
+            summary: 'Certification incentives and internal mobility programs.',
+            evidenceCount: 59,
+            confidence: { level: 'high', percentage: 81, label: 'High confidence' },
+          },
+          management: {
+            key: 'management',
+            name: 'Management',
+            score: 75,
+            trend: 'mixed',
+            trendText: 'Category evidence score: 75',
+            summary: 'Hierarchical structure with process-driven evaluation.',
+            evidenceCount: 38,
+            confidence: { level: 'mixed', label: 'Mixed confidence' },
+          },
+          learning: {
+            key: 'learning',
+            name: 'Learning Opportunities',
+            score: 88,
+            trend: 'positive',
+            trendText: 'Category evidence score: 88',
+            summary: 'World-renowned Mysore training facility and digital learning tracks.',
+            evidenceCount: 78,
+            confidence: { level: 'high', percentage: 84, label: 'High confidence' },
+          },
+          stability: {
+            key: 'stability',
+            name: 'Job Stability',
+            score: 88,
+            trend: 'positive',
+            trendText: 'Category evidence score: 88',
+            summary: 'Established enterprise enterprise contracts ensure job security.',
+            evidenceCount: 67,
+            confidence: { level: 'high', percentage: 87, label: 'High confidence' },
+          },
+          satisfaction: {
+            key: 'satisfaction',
+            name: 'Overall Satisfaction',
+            score: 80,
+            trend: 'positive',
+            trendText: 'Category evidence score: 80',
+            summary: 'Stable and predictable stepping stone for young talent.',
+            evidenceCount: 60,
+            confidence: { level: 'high', percentage: 80, label: 'High confidence' },
+          },
+        },
+        positiveSignals: ['Balanced work-life signals', 'Paced training programs'],
+        concernSignals: ['Role progression varies', 'Bureaucracy in promotion cycles'],
+        aiSummary: {
+          highlight: 'Strongest balance between training and sustainable work hours.',
+          quote:
+            'Infosys demonstrates superior work-life balance feedback compared to direct peers, backed by strong early-career training curricula, while compensation progression remains a moderate discussion point.',
+          freshness: 'Updated 10 days ago',
+          sourcesCount: 3,
+          reviewCount: 114,
+          confidence: { level: 'high', percentage: 81, label: 'High confidence · 81%' },
+        },
+        praises: [
+          { title: 'Work-Life balance', percentage: 82, count: 68 },
+          { title: 'Training programs', percentage: 74, count: 61 },
+          { title: 'Job stability', percentage: 85, count: 70 },
+        ],
+        mixed: [
+          { title: 'Salary increments', percentage: 39, count: 32 },
+          { title: 'Promotion timeline', percentage: 34, count: 28 },
+        ],
+        risks: [
+          { level: 'Low', category: 'Work-Life balance', score: 24, description: 'Consistent feedback on manageable deadlines.' },
+          { level: 'Medium', category: 'Salary progression', score: 50, description: 'Increments follow strict annual tenure bands.' },
+        ],
+        concernsToInvestigate: [
+          { id: '01', title: 'Promotion timeline', description: 'Appraisals are linked to institutional cycle schedules.' },
+          { id: '02', title: 'Tech stack modernness', description: 'Depends heavily on whether you enter digital or legacy maintenance accounts.' },
+        ],
+      },
+      {
+        slug: 'accenture',
+        name: 'Accenture plc',
+        shortName: 'Accenture',
+        logoText: '>',
+        logoBg: '#7547CB',
+        logoColor: '#FFFFFF',
+        industry: 'IT Services · India',
+        location: 'Global / India',
+        website: 'accenture.com',
+        description:
+          'Leading global professional services company providing consulting, digital, and technology services across diverse international enterprise accounts.',
+        overallScore: 85,
+        overallScoreMax: 100,
+        confidence: {
+          level: 'high',
+          percentage: 84,
+          label: 'High confidence · 84%',
+          detail: '142 verified review samples with high consensus across technical exposure metrics.',
+        },
+        reviewCount: 142,
+        sampleSourcesCount: 3,
+        sampleSourcesSummary: 'Oct 2026 · Sample A / B / C',
+        isDemoData: true,
+        categories: {
+          culture: {
+            key: 'culture',
+            name: 'Work Culture',
+            score: 82,
+            trend: 'positive',
+            trendText: 'Category evidence score: 82',
+            summary: 'Fast-paced, performance-oriented meritocracy.',
+            evidenceCount: 71,
+            confidence: { level: 'high', percentage: 83, label: 'High confidence' },
+          },
+          salary: {
+            key: 'salary',
+            name: 'Salary & Benefits',
+            score: 84,
+            trend: 'positive',
+            trendText: 'Category evidence score: 84',
+            summary: 'Competitive market rates with performance bonuses.',
+            evidenceCount: 68,
+            confidence: { level: 'high', percentage: 85, label: 'High confidence' },
+          },
+          wlb: {
+            key: 'wlb',
+            name: 'Work-Life Balance',
+            score: 72,
+            trend: 'mixed',
+            trendText: 'Category evidence score: 72',
+            summary: 'Consulting deliverables can demand intensive hours during sprints.',
+            evidenceCount: 62,
+            confidence: { level: 'mixed', label: 'Mixed confidence' },
+          },
+          growth: {
+            key: 'growth',
+            name: 'Career Growth',
+            score: 92,
+            trend: 'positive',
+            trendText: 'Category evidence score: 92',
+            summary: 'Rapid career trajectory for high performers.',
+            evidenceCount: 88,
+            confidence: { level: 'high', percentage: 89, label: 'High confidence' },
+          },
+          management: {
+            key: 'management',
+            name: 'Management',
+            score: 79,
+            trend: 'positive',
+            trendText: 'Category evidence score: 79',
+            summary: 'Structured leadership with global engagement standards.',
+            evidenceCount: 54,
+            confidence: { level: 'high', percentage: 80, label: 'High confidence' },
+          },
+          learning: {
+            key: 'learning',
+            name: 'Learning Opportunities',
+            score: 94,
+            trend: 'positive',
+            trendText: 'Category evidence score: 94',
+            summary: 'Cutting-edge enterprise tools, cloud credits, and external certifications.',
+            evidenceCount: 96,
+            confidence: { level: 'high', percentage: 91, label: 'High confidence' },
+          },
+          stability: {
+            key: 'stability',
+            name: 'Job Stability',
+            score: 82,
+            trend: 'positive',
+            trendText: 'Category evidence score: 82',
+            summary: 'Strong financial footing with client delivery dependencies.',
+            evidenceCount: 64,
+            confidence: { level: 'high', percentage: 82, label: 'High confidence' },
+          },
+          satisfaction: {
+            key: 'satisfaction',
+            name: 'Overall Satisfaction',
+            score: 84,
+            trend: 'positive',
+            trendText: 'Category evidence score: 84',
+            summary: 'High prestige and portfolio value for technical engineers.',
+            evidenceCount: 76,
+            confidence: { level: 'high', percentage: 84, label: 'High confidence' },
+          },
+        },
+        positiveSignals: ['Technology & project exposure', 'Accelerated growth & compensation'],
+        concernSignals: ['Peak workload varies', 'High sprint demands'],
+        aiSummary: {
+          highlight: 'Top performer for learning agility and technology depth.',
+          quote:
+            'Accenture scores highest among service providers for technology exposure and career velocity, though intense client deadlines produce noticeable work-life balance pressure.',
+          freshness: 'Updated 8 days ago',
+          sourcesCount: 3,
+          reviewCount: 142,
+          confidence: { level: 'high', percentage: 84, label: 'High confidence · 84%' },
+        },
+        praises: [
+          { title: 'Technology exposure', percentage: 84, count: 86 },
+          { title: 'Fast-paced growth', percentage: 79, count: 77 },
+          { title: 'Competitive compensation', percentage: 72, count: 65 },
+        ],
+        mixed: [
+          { title: 'Work-Life balance sprints', percentage: 38, count: 36 },
+          { title: 'Project variance', percentage: 26, count: 24 },
+        ],
+        risks: [
+          { level: 'Medium', category: 'Peak workload', score: 56, description: 'Client deliveries may require extended hours.' },
+          { level: 'Low', category: 'Learning obsolescence', score: 14, description: 'Consistent access to modern enterprise stacks.' },
+        ],
+        concernsToInvestigate: [
+          { id: '01', title: 'Sprint pace', description: 'Confirm team expectation on after-hours client support.' },
+          { id: '02', title: 'Bench period policy', description: 'Internal allocation processes operate quickly.' },
+        ],
+      },
+      {
+        slug: 'microsoft',
+        name: 'Microsoft Corporation',
+        shortName: 'Microsoft',
+        logoText: 'ms',
+        logoBg: '#00A4EF',
+        logoColor: '#FFFFFF',
+        industry: 'Technology · Global',
+        location: 'Hyderabad / Bangalore / Redmond',
+        website: 'microsoft.com',
+        description:
+          'Tier-1 product engineering company building global cloud, productivity, AI, and systems infrastructure.',
+        overallScore: 89,
+        overallScoreMax: 100,
+        confidence: {
+          level: 'high',
+          percentage: 88,
+          label: 'High confidence · 88%',
+          detail: '198 global engineering feedback items verified against employee records.',
+        },
+        reviewCount: 198,
+        sampleSourcesCount: 4,
+        sampleSourcesSummary: 'Oct 2026 · Sample A / B / C',
+        isDemoData: true,
+        categories: {
+          culture: {
+            key: 'culture',
+            name: 'Work Culture',
+            score: 90,
+            trend: 'positive',
+            trendText: 'Category evidence score: 90',
+            summary: 'Growth mindset ethos, inclusive and intellectually demanding.',
+            evidenceCount: 110,
+            confidence: { level: 'high', percentage: 89, label: 'High confidence' },
+          },
+          salary: {
+            key: 'salary',
+            name: 'Salary & Benefits',
+            score: 92,
+            trend: 'positive',
+            trendText: 'Category evidence score: 92',
+            summary: 'Exceptional base, stock grants (RSUs), and health benefits.',
+            evidenceCount: 105,
+            confidence: { level: 'high', percentage: 91, label: 'High confidence' },
+          },
+          wlb: {
+            key: 'wlb',
+            name: 'Work-Life Balance',
+            score: 86,
+            trend: 'positive',
+            trendText: 'Category evidence score: 86',
+            summary: 'Respected boundaries with generous PTO and hybrid autonomy.',
+            evidenceCount: 94,
+            confidence: { level: 'high', percentage: 86, label: 'High confidence' },
+          },
+          growth: {
+            key: 'growth',
+            name: 'Career Growth',
+            score: 89,
+            trend: 'positive',
+            trendText: 'Category evidence score: 89',
+            summary: 'Clear level benchmarks from SDE-1 to Partner Engineer.',
+            evidenceCount: 98,
+            confidence: { level: 'high', percentage: 88, label: 'High confidence' },
+          },
+          management: {
+            key: 'management',
+            name: 'Management',
+            score: 85,
+            trend: 'positive',
+            trendText: 'Category evidence score: 85',
+            summary: 'Empathetic leadership training with 1-on-1 career coaching.',
+            evidenceCount: 82,
+            confidence: { level: 'high', percentage: 84, label: 'High confidence' },
+          },
+          learning: {
+            key: 'learning',
+            name: 'Learning Opportunities',
+            score: 93,
+            trend: 'positive',
+            trendText: 'Category evidence score: 93',
+            summary: 'World-class mentors, massive internal codebases, AI research access.',
+            evidenceCount: 120,
+            confidence: { level: 'high', percentage: 92, label: 'High confidence' },
+          },
+          stability: {
+            key: 'stability',
+            name: 'Job Stability',
+            score: 92,
+            trend: 'positive',
+            trendText: 'Category evidence score: 92',
+            summary: 'Strong balance sheet and resilient enterprise software franchises.',
+            evidenceCount: 95,
+            confidence: { level: 'high', percentage: 90, label: 'High confidence' },
+          },
+          satisfaction: {
+            key: 'satisfaction',
+            name: 'Overall Satisfaction',
+            score: 88,
+            trend: 'positive',
+            trendText: 'Category evidence score: 88',
+            summary: 'High pride in products impacting hundreds of millions of users.',
+            evidenceCount: 114,
+            confidence: { level: 'high', percentage: 89, label: 'High confidence' },
+          },
+        },
+        positiveSignals: ['Strong technical learning', 'Premium compensation & culture'],
+        concernSignals: ['Large organization coordination overhead'],
+        aiSummary: {
+          highlight: 'Tier-1 product engineering environment with elite mentorship.',
+          quote:
+            'Microsoft delivers best-in-class technical exposure and culture support. Ideal for software engineers seeking massive scale and high compensation, though navigating cross-team alignments requires organizational patience.',
+          freshness: 'Updated 5 days ago',
+          sourcesCount: 4,
+          reviewCount: 198,
+          confidence: { level: 'high', percentage: 88, label: 'High confidence · 88%' },
+        },
+        praises: [
+          { title: 'Technical depth', percentage: 89, count: 112 },
+          { title: 'Compensation & perks', percentage: 91, count: 120 },
+          { title: 'Growth mindset culture', percentage: 86, count: 98 },
+        ],
+        mixed: [
+          { title: 'Cross-org dependencies', percentage: 29, count: 32 },
+        ],
+        risks: [
+          { level: 'Low', category: 'Job Stability', score: 12, description: 'Very high stability and global revenue diversification.' },
+        ],
+        concernsToInvestigate: [
+          { id: '01', title: 'Team assignment', description: 'Product teams differ in velocity.' },
+        ],
+      },
+      {
+        slug: 'google',
+        name: 'Alphabet / Google',
+        shortName: 'Google',
+        logoText: 'G',
+        logoBg: '#EA4335',
+        logoColor: '#FFFFFF',
+        industry: 'Technology · Global',
+        location: 'Bangalore / Hyderabad / Mountain View',
+        website: 'google.com',
+        description:
+          'Pioneering global technology company focused on search, cloud computing, AI, operating systems, and developer tools.',
+        overallScore: 92,
+        overallScoreMax: 100,
+        confidence: {
+          level: 'high',
+          percentage: 90,
+          label: 'High confidence · 90%',
+          detail: '210 validated engineering reviews with strong consensus across compensation and engineering caliber.',
+        },
+        reviewCount: 210,
+        sampleSourcesCount: 4,
+        sampleSourcesSummary: 'Oct 2026 · Sample A / B / C',
+        isDemoData: true,
+        categories: {
+          culture: {
+            key: 'culture',
+            name: 'Work Culture',
+            score: 94,
+            trend: 'positive',
+            trendText: 'Category evidence score: 94',
+            summary: 'Exceptional openness, psychological safety, and peer caliber.',
+            evidenceCount: 130,
+            confidence: { level: 'high', percentage: 92, label: 'High confidence' },
+          },
+          salary: {
+            key: 'salary',
+            name: 'Salary & Benefits',
+            score: 95,
+            trend: 'positive',
+            trendText: 'Category evidence score: 95',
+            summary: 'Market-setting compensation, benefits, meals, and equity.',
+            evidenceCount: 125,
+            confidence: { level: 'high', percentage: 94, label: 'High confidence' },
+          },
+          wlb: {
+            key: 'wlb',
+            name: 'Work-Life Balance',
+            score: 85,
+            trend: 'positive',
+            trendText: 'Category evidence score: 85',
+            summary: 'Generally flexible with high autonomy over personal schedule.',
+            evidenceCount: 112,
+            confidence: { level: 'high', percentage: 88, label: 'High confidence' },
+          },
+          growth: {
+            key: 'growth',
+            name: 'Career Growth',
+            score: 91,
+            trend: 'positive',
+            trendText: 'Category evidence score: 91',
+            summary: 'Rigorous promotion committees ensuring objective recognition.',
+            evidenceCount: 108,
+            confidence: { level: 'high', percentage: 89, label: 'High confidence' },
+          },
+          management: {
+            key: 'management',
+            name: 'Management',
+            score: 87,
+            trend: 'positive',
+            trendText: 'Category evidence score: 87',
+            summary: 'Data-driven manager feedback with high emphasis on engineering autonomy.',
+            evidenceCount: 95,
+            confidence: { level: 'high', percentage: 87, label: 'High confidence' },
+          },
+          learning: {
+            key: 'learning',
+            name: 'Learning Opportunities',
+            score: 95,
+            trend: 'positive',
+            trendText: 'Category evidence score: 95',
+            summary: 'Internal infrastructure, foundational AI models, and peer learning.',
+            evidenceCount: 135,
+            confidence: { level: 'high', percentage: 93, label: 'High confidence' },
+          },
+          stability: {
+            key: 'stability',
+            name: 'Job Stability',
+            score: 90,
+            trend: 'positive',
+            trendText: 'Category evidence score: 90',
+            summary: 'Substantial enterprise and ads moat.',
+            evidenceCount: 99,
+            confidence: { level: 'high', percentage: 89, label: 'High confidence' },
+          },
+          satisfaction: {
+            key: 'satisfaction',
+            name: 'Overall Satisfaction',
+            score: 91,
+            trend: 'positive',
+            trendText: 'Category evidence score: 91',
+            summary: 'Pinnacle engineering brand with lifelong resume authority.',
+            evidenceCount: 122,
+            confidence: { level: 'high', percentage: 91, label: 'High confidence' },
+          },
+        },
+        positiveSignals: ['Exceptional peer caliber', 'Industry-benchmark compensation'],
+        concernSignals: ['Large company committee promotions'],
+        aiSummary: {
+          highlight: 'Gold-standard engineering excellence and compensation.',
+          quote:
+            'Google leads in technological infrastructure, compensation, and peer caliber. Feedback reflects immense technical pride, though formal promotion packets demand high cross-functional documentation.',
+          freshness: 'Updated 4 days ago',
+          sourcesCount: 4,
+          reviewCount: 210,
+          confidence: { level: 'high', percentage: 90, label: 'High confidence · 90%' },
+        },
+        praises: [
+          { title: 'Engineering scale', percentage: 93, count: 128 },
+          { title: 'Compensation & benefits', percentage: 94, count: 131 },
+          { title: 'Inclusive culture', percentage: 89, count: 118 },
+        ],
+        mixed: [
+          { title: 'Promotion packet complexity', percentage: 32, count: 36 },
+        ],
+        risks: [
+          { level: 'Low', category: 'Tech obsolescence', score: 10, description: 'Direct access to frontier AI and distributed systems.' },
+        ],
+        concernsToInvestigate: [
+          { id: '01', title: 'Internal mobility', description: 'Internal transfers require team matching processes.' },
+        ],
+      },
+    ];
+
+    const companyDocs = {};
+
+    for (const c of rawCompanies) {
+      logger.info(`Creating company ${c.name}...`);
+      const company = await Company.create({
+        slug: c.slug,
+        name: c.name,
+        shortName: c.shortName,
+        logoText: c.logoText,
+        logoBg: c.logoBg,
+        logoColor: c.logoColor,
+        industry: c.industry,
+        location: c.location,
+        website: c.website,
+        description: c.description,
+        overallScore: c.overallScore,
+        overallScoreMax: c.overallScoreMax,
+        confidence: c.confidence,
+        reviewCount: c.reviewCount,
+        sampleSourcesCount: c.sampleSourcesCount,
+        sampleSourcesSummary: c.sampleSourcesSummary,
+        isDemoData: true,
+      });
+
+      companyDocs[c.slug] = company;
+
+      // Create CompanyIntelligence
+      await CompanyIntelligence.create({
+        companyId: company._id,
+        companySlug: company.slug,
+        categories: c.categories,
+        positiveSignals: c.positiveSignals,
+        concernSignals: c.concernSignals,
+        aiSummary: c.aiSummary,
+        praises: c.praises,
+        mixed: c.mixed,
+        risks: c.risks,
+        concernsToInvestigate: c.concernsToInvestigate,
+        isDemoData: true,
+      });
+
+      // Create Sources
+      const sampleSources = [
+        {
+          companyId: company._id,
+          companySlug: company.slug,
+          name: 'Sample company profile',
+          type: 'Official Company',
+          sampleSize: '1 profile · Business context',
+          date: 'Oct 16, 2026',
+          freshness: 'Recent · 12 days',
+          status: 'Verified',
+          statusType: 'verified',
+          description: 'Corporate filings, publicly disclosed operational and workforce scale indicators.',
+          agreement: 'Official baseline',
+          isDemoData: true,
+        },
+        {
+          companyId: company._id,
+          companySlug: company.slug,
+          name: 'Sample Sources A / B / C',
+          type: 'Employee Review',
+          sampleSize: `${company.reviewCount} reviews · 52 / 44 / 31`,
+          reviewCount: company.reviewCount,
+          date: 'Oct 12–16, 2026',
+          freshness: 'Recent · 12 days',
+          status: 'Mixed',
+          statusType: 'mixed',
+          description: 'Aggregated verified employee submissions across Indian engineering centers.',
+          agreement: 'Consensus on learning and stability; divergence on salary progression.',
+          isDemoData: true,
+        },
+        {
+          companyId: company._id,
+          companySlug: company.slug,
+          name: 'Sample industry dataset',
+          type: 'Public Dataset',
+          sampleSize: 'No usable category sample',
+          date: 'Feb 2026',
+          freshness: 'Stale · 8 months',
+          status: 'Needs refresh',
+          statusType: 'warning',
+          description: 'Third-party macro IT services benchmarking survey. Outdated band compensation data.',
+          agreement: 'Historical trend only',
+          isDemoData: true,
+        },
+        {
+          companyId: company._id,
+          companySlug: company.slug,
+          name: 'CompanyIQ learning summary',
+          type: 'AI interpretation',
+          sampleSize: `${c.categories.learning.evidenceCount} related mentions`,
+          date: 'Oct 16, 2026',
+          freshness: 'Based on recent sample',
+          status: 'High confidence',
+          statusType: 'info',
+          description: 'Synthesized thematic clustering across reviews tagged under training, mentor support and tech exposure.',
+          agreement: '82% source agreement across Sample A, B, and C',
+          isDemoData: true,
+        },
+        {
+          companyId: company._id,
+          companySlug: company.slug,
+          name: "Hariom's saved Career DNA",
+          type: 'User Preference',
+          sampleSize: '1 saved profile',
+          date: 'Oct 18, 2026',
+          freshness: 'Current preference',
+          status: 'User supplied',
+          statusType: 'info',
+          description: 'Backend Developer Fresher profile prioritizing learning (95) and growth (90).',
+          agreement: 'User context',
+          isDemoData: true,
+        },
+      ];
+
+      const createdSources = await Source.insertMany(sampleSources);
+
+      // Create Evidence for learning category
+      await Evidence.create({
+        companyId: company._id,
+        companySlug: company.slug,
+        categoryKey: 'learning',
+        claim: 'Employees frequently highlight strong learning opportunities.',
+        status: 'SUPPORTED',
+        reviewsAnalyzed: company.reviewCount,
+        relevantMentions: c.categories.learning.evidenceCount,
+        sentimentBreakdown: {
+          positive: Math.round(c.categories.learning.evidenceCount * 0.73),
+          neutral: Math.round(c.categories.learning.evidenceCount * 0.17),
+          negative: Math.round(c.categories.learning.evidenceCount * 0.10),
+        },
+        sources: [
+          { name: 'Sample Source A', reviewCount: 52, date: 'Oct 16, 2026', verified: true, statusText: 'Verified' },
+          { name: 'Sample Source B', reviewCount: 44, date: 'Oct 14, 2026', verified: true, statusText: 'Verified' },
+          { name: 'Sample Source C', reviewCount: 31, date: 'Oct 12, 2026', verified: false, statusText: 'Mixed' },
+        ],
+        sourceIds: createdSources.map((s) => s._id),
+        confidence: {
+          level: 'high',
+          percentage: 82,
+          label: 'High confidence · 82%',
+          detail: 'Consistent positive sentiment across 3 separate sample collections.',
+        },
+        limitations: [
+          'Conflict - Salary: Sources agree more closely on learning than salary. Feedback may overrepresent particular teams or locations.',
+          'User preference context: Your learning priority is 95/100. This affects Career Fit, not the evidence distribution.',
+        ],
+        contextNote: 'Sources agree more closely on learning than salary. Feedback may overrepresent particular teams or locations.',
+        userPreferenceNote: 'Your learning priority is 95/100. This affects Career Fit, not the evidence distribution.',
+        isDemoData: true,
+      });
+
+      // Create ReviewAggregate
+      await ReviewAggregate.create({
+        companyId: company._id,
+        companySlug: company.slug,
+        companyName: company.name,
+        totalReviews: company.reviewCount,
+        sampleSourcesCount: company.sampleSourcesCount,
+        daysSinceCheck: 12,
+        commonPositiveThemes: [
+          { theme: 'Learning', percentage: 76, signal: 'positive' },
+          { theme: 'Growth', percentage: 71, signal: 'positive' },
+          { theme: 'Stability', percentage: 87, signal: 'positive' },
+        ],
+        concernsWorthExploring: [
+          { concern: 'Salary progression', percentage: 43, signal: 'negative' },
+          { concern: 'Management consistency', percentage: 31, signal: 'negative' },
+          { concern: 'Peak workload / WLB', percentage: 28, signal: 'negative' },
+        ],
+        sentimentTrend: [
+          { year: 2024, positive: 60, neutral: 25, negative: 15 },
+          { year: 2025, positive: 68, neutral: 20, negative: 12 },
+          { year: 2026, positive: 72, neutral: 18, negative: 10 },
+        ],
+        sourceAgreement: {
+          summary: 'Learning shows agreement across the sample. Salary signals are conflicting.',
+          sources: [
+            { name: 'Sample Source A', reviewCount: 52, date: 'Oct 16, 2026', verified: true },
+            { name: 'Sample Source B', reviewCount: 44, date: 'Oct 14, 2026', verified: true },
+            { name: 'Sample Source C', reviewCount: 31, date: 'Oct 12, 2026', verified: false },
+          ],
+        },
+        themesTable: [
+          { theme: 'Learning opportunities', relatedMentions: 86, evidenceQuality: 'High / Recent', signal: 'positive', nextStep: 'Open learning evidence' },
+          { theme: 'Project exposure / growth', relatedMentions: 70, evidenceQuality: 'High / Recent', signal: 'positive', nextStep: 'View growth breakdown' },
+          { theme: 'Salary progression', relatedMentions: 41, evidenceQuality: 'Conflicting', signal: 'negative', nextStep: 'Compare source signals' },
+          { theme: 'Promotion timeline', relatedMentions: 0, evidenceQuality: 'Insufficient data', signal: 'neutral', nextStep: 'Request more evidence' },
+        ],
+        interpretation: {
+          summary:
+            'Available feedback frequently highlights learning and stability. Salary progression and workload deserve more investigation. Reviews are self-selected and may not reflect every employee or team.',
+          limitations: 'Reviews reflect individual experiences and can vary across accounts.',
+        },
+        isDemoData: true,
+      });
+
+      // Add to user saved companies
+      await SavedCompany.create({
+        userId: user._id,
+        companyId: company._id,
+        companySlug: company.slug,
+      });
+    }
+
+    // 4. Create Saved Comparisons for Hariom
+    logger.info('Creating saved comparison scenarios...');
+    await ComparisonScenario.create([
+      {
+        userId: user._id,
+        title: 'Backend fresher · Baseline',
+        description: 'Accenture 91% · TCS 86% · Infosys 81%',
+        companies: ['accenture', 'tcs', 'infosys'],
+        companyIds: [companyDocs['accenture']._id, companyDocs['tcs']._id, companyDocs['infosys']._id],
+        scenarioType: 'baseline',
+        isBaseline: true,
+        priorities: {
+          learning: 95,
+          growth: 90,
+          stability: 85,
+          culture: 80,
+          wlb: 75,
+          salary: 70,
+          technology: 90,
+          location: 60,
+        },
+        rankings: [
+          { companyId: 'accenture', companyName: 'Accenture', score: 91, rank: 1, tagline: 'Best scenario match' },
+          { companyId: 'tcs', companyName: 'TCS', score: 86, rank: 2, tagline: 'Strong stability alignment' },
+          { companyId: 'infosys', companyName: 'Infosys', score: 81, rank: 3, tagline: 'Balance strength' },
+        ],
+      },
+      {
+        userId: user._id,
+        title: 'Balance-first · WLB 100',
+        description: 'Infosys 91% · TCS 86% · Accenture 77%',
+        companies: ['infosys', 'tcs', 'accenture'],
+        companyIds: [companyDocs['infosys']._id, companyDocs['tcs']._id, companyDocs['accenture']._id],
+        scenarioType: 'what-if',
+        isBaseline: false,
+        priorities: {
+          learning: 95,
+          growth: 90,
+          stability: 85,
+          culture: 80,
+          wlb: 100,
+          salary: 70,
+          technology: 90,
+          location: 60,
+        },
+        rankings: [
+          { companyId: 'infosys', companyName: 'Infosys', score: 91, rank: 1, tagline: 'Best scenario match' },
+          { companyId: 'tcs', companyName: 'TCS', score: 86, rank: 2, tagline: 'Consistent balance & stability' },
+          { companyId: 'accenture', companyName: 'Accenture', score: 77, rank: 3, tagline: 'Weaker work-life fit' },
+        ],
+      },
+      {
+        userId: user._id,
+        title: 'TCS vs Accenture · Battle',
+        description: 'Accenture 91% · TCS 86%',
+        companies: ['tcs', 'accenture'],
+        companyIds: [companyDocs['tcs']._id, companyDocs['accenture']._id],
+        scenarioType: 'battle',
+        isBaseline: false,
+        priorities: {
+          learning: 95,
+          growth: 90,
+          stability: 85,
+          culture: 80,
+          wlb: 75,
+          salary: 70,
+          technology: 90,
+          location: 60,
+        },
+        rankings: [
+          { companyId: 'accenture', companyName: 'Accenture', score: 91, rank: 1, tagline: 'Best match' },
+          { companyId: 'tcs', companyName: 'TCS', score: 86, rank: 2, tagline: 'Runner-up' },
+        ],
+      },
+      {
+        userId: user._id,
+        title: 'Company evidence comparison',
+        description: 'TCS 82 · Infosys 80 · Accenture 85 / 100',
+        companies: ['tcs', 'infosys', 'accenture'],
+        companyIds: [companyDocs['tcs']._id, companyDocs['infosys']._id, companyDocs['accenture']._id],
+        scenarioType: 'custom',
+        isBaseline: false,
+        priorities: {
+          learning: 95,
+          growth: 90,
+          stability: 85,
+          culture: 80,
+          wlb: 75,
+          salary: 70,
+          technology: 90,
+          location: 60,
+        },
+        rankings: [
+          { companyId: 'accenture', companyName: 'Accenture', score: 85, rank: 1, tagline: 'Highest composite score' },
+          { companyId: 'tcs', companyName: 'TCS', score: 82, rank: 2, tagline: 'Solid composite score' },
+          { companyId: 'infosys', companyName: 'Infosys', score: 80, rank: 3, tagline: 'Balanced composite score' },
+        ],
+      },
+    ]);
+
+    // 5. Create Research History for Hariom
+    logger.info('Creating research history items...');
+    await ResearchHistory.create([
+      {
+        userId: user._id,
+        activity: 'Why did Infosys move to #1?',
+        type: 'AI question',
+        context: 'What-If · Balance 100',
+        time: '10:59 AM',
+        dateGroup: 'TODAY / OCT 28, 2026',
+        link: '/what-if',
+      },
+      {
+        userId: user._id,
+        activity: 'Balance-first scenario saved',
+        type: 'Comparison',
+        context: 'Infosys / TCS / Accenture',
+        time: '10:58 AM',
+        dateGroup: 'TODAY / OCT 28, 2026',
+        link: '/saved-comparisons',
+      },
+      {
+        userId: user._id,
+        activity: 'TCS vs Accenture',
+        type: 'Comparison',
+        context: 'Demo baseline scenario',
+        time: '10:48 AM',
+        dateGroup: 'TODAY / OCT 28, 2026',
+        link: '/compare',
+      },
+      {
+        userId: user._id,
+        activity: 'Is TCS good for freshers?',
+        type: 'AI question',
+        context: 'TCS · Saved DNA',
+        time: '10:45 AM',
+        dateGroup: 'TODAY / OCT 28, 2026',
+        link: '/ask',
+      },
+      {
+        userId: user._id,
+        activity: 'Tata Consultancy Services',
+        type: 'Company',
+        context: 'Learning evidence viewed',
+        time: '10:42 AM',
+        dateGroup: 'TODAY / OCT 28, 2026',
+        link: '/company/tcs',
+      },
+      {
+        userId: user._id,
+        activity: 'Accenture company intelligence',
+        type: 'Company',
+        context: 'Category evidence',
+        time: '4:35 PM',
+        dateGroup: 'YESTERDAY / OCT 27, 2026',
+        link: '/company/accenture',
+      },
+      {
+        userId: user._id,
+        activity: 'TCS vs Accenture · Battle',
+        type: 'Comparison',
+        context: 'Saved comparison',
+        time: '4:20 PM',
+        dateGroup: 'YESTERDAY / OCT 27, 2026',
+        link: '/compare/battle',
+      },
+      {
+        userId: user._id,
+        activity: 'Which has stronger learning?',
+        type: 'AI question',
+        context: 'TCS / Accenture',
+        time: '4:12 PM',
+        dateGroup: 'YESTERDAY / OCT 27, 2026',
+        link: '/ask',
+      },
+    ]);
+
+    // 6. Create Watchlist Alerts
+    logger.info('Creating watchlist alerts...');
+    await Alert.create([
+      {
+        userId: user._id,
+        companyId: companyDocs['tcs']._id,
+        companySlug: 'tcs',
+        companyName: 'TCS',
+        type: 'score_update',
+        title: 'TCS · New company intelligence data available.',
+        date: 'Oct 28, 2026',
+        previousScore: 82,
+        newScore: 84,
+        description: 'This newer illustrative watchlist snapshot is separate from the flagship TCS research screen, which displays the earlier 82/100 snapshot.',
+        isNew: true,
+        actionText: 'Review snapshot changes',
+      },
+      {
+        userId: user._id,
+        companyId: companyDocs['infosys']._id,
+        companySlug: 'infosys',
+        companyName: 'Infosys',
+        type: 'source_freshness',
+        title: 'Infosys · Source freshness reminder',
+        date: 'Oct 27, 2026',
+        description: 'One supporting public dataset is stale. The source’s last-check date is visible before you use it.',
+        isNew: true,
+        actionText: 'View source status',
+      },
+    ]);
+
+    // 7. Create Seed AI Conversations
+    logger.info('Creating AI threads...');
+    await AIConversation.create([
+      {
+        userId: user._id,
+        companyId: companyDocs['tcs']._id,
+        companyContext: 'TCS',
+        title: 'TCS for a backend fresher',
+        messages: [
+          {
+            id: 'msg-1',
+            sender: 'user',
+            timestamp: '10:45 AM',
+            text: 'Is TCS good for freshers?',
+          },
+          {
+            id: 'msg-2',
+            sender: 'assistant',
+            timestamp: '10:45 AM',
+            claim: 'TCS may align with a learning-first fresher profile—with trade-offs worth checking.',
+            text: `Available employee feedback frequently highlights strong learning opportunities and project exposure. In this sample, 86 learning-related mentions include 63 positive, 15 neutral and 8 negative signals.
+
+For your saved Backend Developer DNA, learning and stability have high priority. That helps explain TCS's 87% Career Fit. This is personal alignment, not an absolute company rating.
+
+Salary progression is more mixed across sources. Ask about the specific team's backend stack, mentorship, promotion process and project allocation before drawing a conclusion.`,
+            confidence: {
+              level: 'high',
+              percentage: 82,
+              label: 'High confidence · 82%',
+              detail: '127 reviews · 3 sample sources · Checked 12 days ago',
+            },
+            evidenceRef: {
+              mentions: 86,
+              positive: 63,
+              neutral: 15,
+              negative: 8,
+              sourcesCount: 3,
+              reviewsCount: 127,
+              checkedDaysAgo: 12,
+            },
+            sources: ['Sample Source A · 52 reviews', 'Sample Source B · 44 reviews', 'Sample Source C · 31 reviews'],
+            followUps: [
+              'What do employees commonly praise?',
+              'What are the biggest concerns?',
+              'How is work-life balance?',
+              'Which company has stronger learning opportunities?',
+              'Why is my Career Fit 87%?',
+            ],
+            caveats: 'Self-selected feedback and company-level aggregation. Fresher-specific backend evidence is limited. These are illustrative sample sources, not verified citations.',
+          },
+        ],
+      },
+    ]);
+
+    logger.info('✅ Seeding completed successfully!');
+    process.exit(0);
+  } catch (error) {
+    logger.error('❌ Seeding failed:', error);
+    process.exit(1);
+  }
+};
+
+seedDatabase();
+

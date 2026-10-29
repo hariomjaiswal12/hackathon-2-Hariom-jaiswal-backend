@@ -1,0 +1,287 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CompanyIQ Backend API",
+    "version": "1.0.0",
+    "description": "Production-ready REST API for CompanyIQ - AI-powered company intelligence and career alignment platform."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "tags": ["System"],
+        "responses": {
+          "200": { "description": "Service healthy" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "careerStage": { "type": "string" },
+                  "targetRole": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login with email & password",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get authenticated user profile",
+        "tags": ["Authentication"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile" }
+        }
+      }
+    },
+    "/companies": {
+      "get": {
+        "summary": "Search and list companies with filters",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "query", "in": "query", "schema": { "type": "string" } },
+          { "name": "industry", "in": "query", "schema": { "type": "string" } },
+          { "name": "minScore", "in": "query", "schema": { "type": "number" } },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of companies" }
+        }
+      }
+    },
+    "/companies/{id}": {
+      "get": {
+        "summary": "Get full company intelligence and profile by slug or ID",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Company intelligence" }
+        }
+      }
+    },
+    "/companies/{id}/evidence": {
+      "get": {
+        "summary": "Get category evidence with sources and sentiment breakdown",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryKey", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Category evidence details" }
+        }
+      }
+    },
+    "/companies/{id}/sources": {
+      "get": {
+        "summary": "Get company sources and freshness",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Company sources" }
+        }
+      }
+    },
+    "/companies/{id}/review-insights": {
+      "get": {
+        "summary": "Get employee review insights and sentiment trend charts",
+        "tags": ["Companies"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Review insights" }
+        }
+      }
+    },
+    "/career-dna": {
+      "get": {
+        "summary": "Get Career DNA profile",
+        "tags": ["Personalize"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Career DNA" } }
+      },
+      "put": {
+        "summary": "Update Career DNA priorities and skills",
+        "tags": ["Personalize"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Updated Career DNA" } }
+      }
+    },
+    "/career-fit": {
+      "get": {
+        "summary": "Get personalized Career Fit for all companies",
+        "tags": ["Personalize"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Career Fit rankings" } }
+      }
+    },
+    "/comparisons/calculate": {
+      "post": {
+        "summary": "Compare 2 or 3 companies across categories",
+        "tags": ["Compare"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["companyIds"],
+                "properties": {
+                  "companyIds": { "type": "array", "items": { "type": "string" } },
+                  "scenario": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Side-by-side comparison" } }
+      }
+    },
+    "/scenarios/calculate": {
+      "post": {
+        "summary": "Calculate What-If priority scenario without changing saved DNA",
+        "tags": ["Personalize"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["priorities"],
+                "properties": {
+                  "priorities": { "type": "object" },
+                  "companyIds": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "What-If calculation result" } }
+      }
+    },
+    "/ai/ask": {
+      "post": {
+        "summary": "Ask CompanyIQ AI question grounded in company evidence",
+        "tags": ["Intelligence"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["question"],
+                "properties": {
+                  "companyId": { "type": "string" },
+                  "question": { "type": "string" },
+                  "threadId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Grounded AI answer" } }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "summary": "Get Overview Dashboard stats, recommendations, and recent research",
+        "tags": ["Main"],
+        "responses": { "200": { "description": "Dashboard data" } }
+      }
+    },
+    "/saved-companies": {
+      "get": {
+        "summary": "Get user shortlisted companies",
+        "tags": ["My Research"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Saved companies" } }
+      }
+    },
+    "/history": {
+      "get": {
+        "summary": "Get user research activity history",
+        "tags": ["My Research"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Research history" } }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "summary": "Get watchlist updates and alerts",
+        "tags": ["System"],
+        "responses": { "200": { "description": "Alerts" } }
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Get user settings and research preferences",
+        "tags": ["System"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Settings" } }
+      }
+    }
+  }
+}
+
