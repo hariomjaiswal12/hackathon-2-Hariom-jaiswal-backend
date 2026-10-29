@@ -10,9 +10,9 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDB();
 
-    server = app.listen(env.PORT, () => {
+    server = app.listen(env.PORT, '0.0.0.0', () => {
       logger.info(`CompanyIQ Backend Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
-      logger.info(`API Health check available at: http://localhost:${env.PORT}/api/v1/health`);
+      logger.info(`API Health check available at: http://0.0.0.0:${env.PORT}/api/v1/health`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error.message);

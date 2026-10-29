@@ -34,6 +34,13 @@ const errorHandler = (err, req, res, next) => {
     message = `Invalid format for resource ID: ${err.value}`;
   }
 
+  if (message === 'Blocked by CORS policy') {
+    statusCode = 403;
+    code = 'CORS_FORBIDDEN';
+    message = 'Origin is not allowed by CORS policy';
+    details = [];
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
