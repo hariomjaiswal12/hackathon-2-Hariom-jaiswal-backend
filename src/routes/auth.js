@@ -14,6 +14,8 @@ const {
 
 router.post('/register', validate(registerValidator), authController.register);
 router.post('/login', validate(loginValidator), authController.login);
+router.get('/google', authController.googleAuthInit);
+router.get('/google/callback', authController.googleCallback);
 router.post('/google', validate(googleAuthValidator), authController.googleLogin);
 router.post('/demo', authController.demoLogin);
 router.get('/me', authenticate, authController.getMe);

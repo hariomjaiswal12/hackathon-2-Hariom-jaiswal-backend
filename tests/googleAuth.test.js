@@ -190,5 +190,51 @@ describe('Google OAuth 2.0 Authentication & Session Suite', () => {
       expect(originalUser.name).toBe('Password User');
     });
   });
+
+  // --- 4. Google OAuth 2.0 Redirect Flow ---
+  describe('Google OAuth 2.0 Redirect Flow', () => {
+    it('should generate Google authorization URL on GET /api/v1/auth/google?json=true', async () => {
+      const res = await request(app).get('/api/v1/auth/google?json=true');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.url).toMatch(/accounts\.google\.com/);
+      expect(res.body.data.url).toContain(env.GOOGLE_CLIENT_ID);
+    });
+
+    it('should redirect to Google authorization page on GET /api/v1/auth/google', async () => {
+      const res = await request(app).get('/api/v1/auth/google');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toMatch(/accounts\.google\.com/);
+    });
+
+    it('should handle error in Google callback and redirect to frontend with error params', async () => {
+      const res = await request(app).get('/api/v1/auth/google/callback?error=access_denied&error_description=Consent%20cancelled');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('/auth/callback?error=access_denied');
+    });
+
+    it('should exchange valid code and redirect to frontend with tokens', async () => {
+      const redirectGoogleId = `google_sub_redir_${Date.now()}`;
+      const redirectEmail = `google.redir.${Date.now()}@example.com`;
+
+      jest.spyOn(googleAuthService, 'exchangeCodeForTokens').mockResolvedValueOnce({
+        sub: redirectGoogleId,
+        email: redirectEmail,
+        name: 'Redirect Google User',
+        picture: 'https://lh3.googleusercontent.com/mock-avatar',
+        email_verified: true,
+      });
+
+      const res = await request(app).get('/api/v1/auth/google/callback?code=mock_valid_auth_code');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('/auth/callback?token=');
+      expect(res.headers.location).toContain('refreshToken=');
+
+      // Verify user created in MongoDB
+      const dbUser = await User.findOne({ googleId: redirectGoogleId });
+      expect(dbUser).not.toBeNull();
+      expect(dbUser.email).toBe(redirectEmail.toLowerCase());
+    });
+  });
 });
 

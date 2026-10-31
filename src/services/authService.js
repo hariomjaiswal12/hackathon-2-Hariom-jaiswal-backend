@@ -245,13 +245,12 @@ class AuthService {
   }
 
   /**
-   * Authenticates or registers a user via Google OAuth 2.0 ID token.
+   * Internal helper to find, link or create a Google user and generate session tokens.
    *
-   * @param {string} idToken - The Google signed JWT ID token
+   * @param {{ sub: string, email: string, name: string, picture: string, email_verified: boolean }} verified
    * @returns {Promise<{ user: Object, tokens: { accessToken: string, refreshToken: string } }>}
    */
-  async loginWithGoogle(idToken) {
-    const verified = await googleAuthService.verifyIdToken(idToken);
+  async findOrCreateGoogleUser(verified) {
     const { sub: googleId, email, name, picture: avatar, email_verified } = verified;
     const normalizedEmail = (email || '').toLowerCase().trim();
 
@@ -344,6 +343,29 @@ class AuthService {
         refreshToken,
       },
     };
+  }
+
+  /**
+   * Authenticates or registers a user via Google OAuth 2.0 ID token.
+   *
+   * @param {string} idToken - The Google signed JWT ID token
+   * @returns {Promise<{ user: Object, tokens: { accessToken: string, refreshToken: string } }>}
+   */
+  async loginWithGoogle(idToken) {
+    const verified = await googleAuthService.verifyIdToken(idToken);
+    return await this.findOrCreateGoogleUser(verified);
+  }
+
+  /**
+   * Handles Google OAuth 2.0 redirect callback with authorization code.
+   *
+   * @param {string} code - Authorization code from Google redirect
+   * @param {string} [redirectUri] - Callback URI matching redirect
+   * @returns {Promise<{ user: Object, tokens: { accessToken: string, refreshToken: string } }>}
+   */
+  async handleGoogleCallback(code, redirectUri = '') {
+    const verified = await googleAuthService.exchangeCodeForTokens(code, redirectUri);
+    return await this.findOrCreateGoogleUser(verified);
   }
 }
 
